@@ -26,7 +26,6 @@ import type {
   DbPasswordProfile,
   DbRansomwareAction,
   NetworkSecurity,
-  PhishingFlag,
 } from '../types';
 import { MAX_POINTS } from '../types';
 

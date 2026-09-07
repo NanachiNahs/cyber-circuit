@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import ScoreSummary from '../../components/ScoreSummary';
 import { fetchPhishingEmails } from '../../lib/supabase';
-import type { PhishingEmail, PhishingFlag } from '../../types';
+import type { PhishingEmail } from '../../types';
 
 const DEFAULT_EMAILS: PhishingEmail[] = [
   {

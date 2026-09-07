@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { registerTeam, loginTeam } from '../lib/supabase';
 
 type Mode = 'register' | 'login';
@@ -14,13 +13,6 @@ export default function RegisterPage() {
 
   function handleModeSwitch(newMode: Mode) {
     setMode(newMode);
-    setError('');
-  }
-
-  function resetForm() {
-    setResult(null);
-    setGroupName('');
-    setPassword('');
     setError('');
   }
 
