@@ -214,9 +214,9 @@ export default function KioskPage() {
           <Link to="/register" id="go-register" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>
             Central Registration Desk
           </Link>
-          <Link to="/admin" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>
+          {/* <Link to="/admin" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textDecoration: 'none' }}>
             Admin Leaderboard →
-          </Link>
+          </Link> */}
         </div>
       </div>
     </main>
