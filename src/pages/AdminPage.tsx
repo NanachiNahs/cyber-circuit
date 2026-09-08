@@ -26,6 +26,7 @@ import type {
   DbPasswordProfile,
   DbRansomwareAction,
   NetworkSecurity,
+  PhishingFlag,
 } from '../types';
 import { MAX_POINTS } from '../types';
 
@@ -118,6 +119,7 @@ export default function AdminPage() {
       date_str: editingEmail.date_str || 'Mon, 8 Sep 2026 08:00:00',
       body: editingEmail.body || '',
       link_url: editingEmail.link_url || '',
+      is_phishing: editingEmail.is_phishing !== undefined ? editingEmail.is_phishing : true,
       flags: editingEmail.flags || [],
     };
     const { error: err } = await savePhishingEmail(emailToSave);
@@ -546,6 +548,19 @@ export default function AdminPage() {
                           </div>
 
                           <div className="input-group">
+                            <label className="input-label">Email Classification Type</label>
+                            <select
+                              className="input-field"
+                              style={{ background: '#0a0f1e' }}
+                              value={editingEmail.is_phishing !== false ? 'phishing' : 'safe'}
+                              onChange={(e) => setEditingEmail({ ...editingEmail, is_phishing: e.target.value === 'phishing' })}
+                            >
+                              <option value="phishing">🚨 Phishing (Unsafe Scam Email)</option>
+                              <option value="safe">✅ Legitimate (Safe Email)</option>
+                            </select>
+                          </div>
+
+                          <div className="input-group">
                             <label className="input-label">Email Body</label>
                             <textarea
                               className="input-field"
@@ -570,6 +585,146 @@ export default function AdminPage() {
                               onChange={(e) => setEditingEmail({ ...editingEmail, link_url: e.target.value })}
                               placeholder="e.g. https://fake-portal.com/login"
                             />
+                          </div>
+
+                          {/* ── Red Flags Section ── */}
+                          <div style={{
+                            borderTop: '1px solid var(--border-subtle)',
+                            paddingTop: '1rem',
+                            marginTop: '0.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.75rem',
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <label className="input-label" style={{ color: 'var(--neon-pink)', margin: 0, fontSize: '0.88rem' }}>
+                                  🚩 Red Flags ({editingEmail.flags?.length || 0})
+                                </label>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                                  Define suspicious indicators that players need to inspect and flag in this email.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: 'var(--neon-cyan)', border: '1px solid rgba(0,245,255,0.3)' }}
+                                onClick={() => {
+                                  const currentFlags = editingEmail.flags || [];
+                                  const newFlag: PhishingFlag = {
+                                    id: crypto.randomUUID(),
+                                    label: '',
+                                    description: '',
+                                    element: 'body',
+                                    found: false,
+                                  };
+                                  setEditingEmail({ ...editingEmail, flags: [...currentFlags, newFlag] });
+                                }}
+                              >
+                                ＋ Add Red Flag
+                              </button>
+                            </div>
+
+                            {(!editingEmail.flags || editingEmail.flags.length === 0) ? (
+                              <div style={{
+                                padding: '0.85rem',
+                                borderRadius: 8,
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px dashed var(--border-subtle)',
+                                textAlign: 'center',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-muted)',
+                              }}>
+                                No red flags added yet. Click "＋ Add Red Flag" above to create one.
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {editingEmail.flags.map((flag, idx) => (
+                                  <div
+                                    key={flag.id || idx}
+                                    style={{
+                                      padding: '0.85rem',
+                                      borderRadius: 8,
+                                      border: '1px solid rgba(255,71,87,0.25)',
+                                      background: 'rgba(255,71,87,0.03)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      gap: '0.6rem',
+                                    }}
+                                  >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                      <span style={{ fontSize: '0.78rem', color: 'var(--neon-pink)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                                        Flag #{idx + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="btn btn-danger btn-sm"
+                                        style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                                        onClick={() => {
+                                          const updated = editingEmail.flags?.filter((_, i) => i !== idx) || [];
+                                          setEditingEmail({ ...editingEmail, flags: updated });
+                                        }}
+                                      >
+                                        ✕ Remove
+                                      </button>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.6rem' }}>
+                                      <div className="input-group">
+                                        <label className="input-label" style={{ fontSize: '0.72rem' }}>Flag Title / Label</label>
+                                        <input
+                                          className="input-field"
+                                          style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                                          value={flag.label}
+                                          onChange={(e) => {
+                                            const updated = [...(editingEmail.flags || [])];
+                                            updated[idx] = { ...updated[idx], label: e.target.value };
+                                            setEditingEmail({ ...editingEmail, flags: updated });
+                                          }}
+                                          placeholder="e.g. Lookalike Domain Name"
+                                          required
+                                        />
+                                      </div>
+                                      <div className="input-group">
+                                        <label className="input-label" style={{ fontSize: '0.72rem' }}>Target Element</label>
+                                        <select
+                                          className="input-field"
+                                          style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem', background: '#0a0f1e' }}
+                                          value={flag.element}
+                                          onChange={(e) => {
+                                            const updated = [...(editingEmail.flags || [])];
+                                            updated[idx] = { ...updated[idx], element: e.target.value as any };
+                                            setEditingEmail({ ...editingEmail, flags: updated });
+                                          }}
+                                        >
+                                          <option value="sender">Sender Email/Domain</option>
+                                          <option value="subject">Subject Line</option>
+                                          <option value="body">Email Body / Text</option>
+                                          <option value="link">Phishing Link URL</option>
+                                          <option value="attachment">Attachment</option>
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    <div className="input-group">
+                                      <label className="input-label" style={{ fontSize: '0.72rem' }}>Educational Explanation</label>
+                                      <input
+                                        className="input-field"
+                                        style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem' }}
+                                        value={flag.description}
+                                        onChange={(e) => {
+                                          const updated = [...(editingEmail.flags || [])];
+                                          updated[idx] = { ...updated[idx], description: e.target.value };
+                                          setEditingEmail({ ...editingEmail, flags: updated });
+                                        }}
+                                        placeholder="e.g. finance-dept.net is NOT the official university domain."
+                                        required
+                                      />
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
 
                           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -750,6 +905,21 @@ export default function AdminPage() {
                       </div>
                     </div>
 
+                    <div style={{ marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                      <div style={{ color: 'var(--neon-amber)', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                        💡 Configured Password Hints ({passwordProfile?.hints?.length || 0})
+                      </div>
+                      {(!passwordProfile?.hints || passwordProfile.hints.length === 0) ? (
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Using default station fallback hints.</div>
+                      ) : (
+                        <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {passwordProfile.hints.map((hint, i) => (
+                            <li key={i} style={{ marginBottom: '0.2rem' }}>{hint}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
                     {/* Edit Form for Station 3 */}
                     {editingProfile && (
                       <div className="glass-card animate-fade-in" style={{ marginTop: '1.5rem', borderColor: 'var(--station-3)' }}>
@@ -803,7 +973,86 @@ export default function AdminPage() {
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '0.75rem' }}>
+                          {/* ── Password Hints Manager ── */}
+                          <div style={{
+                            borderTop: '1px solid var(--border-subtle)',
+                            paddingTop: '1rem',
+                            marginTop: '0.5rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.75rem',
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <label className="input-label" style={{ color: 'var(--neon-amber)', margin: 0, fontSize: '0.88rem' }}>
+                                  💡 Station Password Hints ({editingProfile.hints?.length || 0})
+                                </label>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>
+                                  Players can unlock these hints step-by-step during the password cracking challenge.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-sm"
+                                style={{ color: 'var(--neon-amber)', border: '1px solid rgba(255,190,0,0.3)' }}
+                                onClick={() => {
+                                  const currentHints = editingProfile.hints || [];
+                                  setEditingProfile({ ...editingProfile, hints: [...currentHints, ''] });
+                                }}
+                              >
+                                ＋ Add Hint
+                              </button>
+                            </div>
+
+                            {(!editingProfile.hints || editingProfile.hints.length === 0) ? (
+                              <div style={{
+                                padding: '0.85rem',
+                                borderRadius: 8,
+                                background: 'rgba(255,255,255,0.02)',
+                                border: '1px dashed var(--border-subtle)',
+                                textAlign: 'center',
+                                fontSize: '0.8rem',
+                                color: 'var(--text-muted)',
+                              }}>
+                                No custom hints added yet. Click "＋ Add Hint" above to create one.
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                {editingProfile.hints.map((hintText, idx) => (
+                                  <div key={idx} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--neon-amber)', fontFamily: 'var(--font-mono)', minWidth: 60 }}>
+                                      Hint #{idx + 1}
+                                    </span>
+                                    <input
+                                      className="input-field"
+                                      style={{ fontSize: '0.82rem', padding: '0.4rem 0.6rem', flex: 1 }}
+                                      value={hintText}
+                                      onChange={(e) => {
+                                        const updated = [...(editingProfile.hints || [])];
+                                        updated[idx] = e.target.value;
+                                        setEditingProfile({ ...editingProfile, hints: updated });
+                                      }}
+                                      placeholder="e.g. Check the target's pet name and birth year"
+                                      required
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn btn-danger btn-sm"
+                                      style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}
+                                      onClick={() => {
+                                        const updated = editingProfile.hints?.filter((_, i) => i !== idx) || [];
+                                        setEditingProfile({ ...editingProfile, hints: updated });
+                                      }}
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                             <button type="submit" className="btn btn-primary">Save Profile Config</button>
                             <button type="button" className="btn btn-ghost" onClick={() => setEditingProfile(null)}>Cancel</button>
                           </div>

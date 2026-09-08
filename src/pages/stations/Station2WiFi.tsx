@@ -3,7 +3,7 @@ import ScoreSummary from '../../components/ScoreSummary';
 import { fetchWiFiNetworks } from '../../lib/supabase';
 import type { WiFiNetwork } from '../../types';
 
-type Scene = 'intro' | 'scan' | 'outcome';
+type Scene = 'intro' | 'scan';
 
 const DEFAULT_NETWORKS: WiFiNetwork[] = [
   { id: 'net-1', ssid: 'BeanHub_Secure', security: 'WPA3', signal: 5, isSafe: true },
@@ -37,7 +37,7 @@ function getOutcome(network: WiFiNetwork): Outcome {
 function SignalBars({ signal }: { signal: number }) {
   return (
     <div className="signal-bars">
-      {[1,2,3,4,5].map(i => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
           className={`signal-bar${i <= signal ? ' active' : ''}`}
@@ -65,7 +65,8 @@ const OUTCOME_BADGE: Record<string, { label: string; cls: string }> = {
 export default function Station2WiFi() {
   const [networks, setNetworks] = useState<WiFiNetwork[]>(DEFAULT_NETWORKS);
   const [scene, setScene] = useState<Scene>('intro');
-  const [chosen, setChosen] = useState<WiFiNetwork | null>(null);
+  const [selectedNetwork, setSelectedNetwork] = useState<WiFiNetwork | null>(null);
+  const [submitted, setSubmitted] = useState(false);
   const [showScore, setShowScore] = useState(false);
 
   useEffect(() => {
@@ -85,17 +86,16 @@ export default function Station2WiFi() {
     loadDynamic();
   }, []);
 
-  const outcome = chosen ? getOutcome(chosen) : null;
+  const outcome = selectedNetwork ? getOutcome(selectedNetwork) : null;
 
-
-  function handleChoose(network: WiFiNetwork) {
-    setChosen(network);
-    setScene('outcome');
+  function handleSubmit() {
+    if (!selectedNetwork) return;
+    setSubmitted(true);
+    setShowScore(true);
   }
 
   return (
     <div style={{ padding: '1.5rem', maxWidth: 800, margin: '0 auto' }}>
-
       {/* Station Header */}
       <div className="station-header animate-fade-in">
         <div className="station-icon-wrap" style={{ background: 'rgba(255,165,2,0.15)', border: '1px solid rgba(255,165,2,0.4)' }}>
@@ -103,14 +103,13 @@ export default function Station2WiFi() {
         </div>
         <div>
           <h2 style={{ color: 'var(--station-2)', marginBottom: '0.2rem' }}>Coffee Shop Connection</h2>
-          <p style={{ fontSize: '0.85rem' }}>Choose wisely — your data is at stake.</p>
+          <p style={{ fontSize: '0.85rem' }}>Analyze the scanner and choose your connection wisely.</p>
         </div>
       </div>
 
       {/* Scene: Intro */}
       {scene === 'intro' && (
         <div className="glass-card animate-fade-in">
-          {/* Comic-style header */}
           <div style={{
             background: 'linear-gradient(135deg, rgba(255,165,2,0.1), rgba(255,165,2,0.03))',
             border: '1px solid rgba(255,165,2,0.2)',
@@ -178,19 +177,27 @@ export default function Station2WiFi() {
             ))}
           </div>
 
-          <div className="glass-card">
+          <div className="glass-card" style={{ marginBottom: '1.5rem' }}>
             <h3 style={{ color: 'var(--neon-amber)', marginBottom: '1rem' }}>
-              📡 Available Networks — Select to Connect
+              📡 Available Networks — Select One to Connect
             </h3>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
               {networks.map((net) => {
+                const isSelected = selectedNetwork?.id === net.id;
                 const badge = SCANNER_BADGE[net.security] || { label: net.security, cls: 'badge-muted' };
+
                 return (
                   <div
                     key={net.id}
                     id={`network-${net.id}`}
-                    className="network-row"
-                    onClick={() => handleChoose(net)}
+                    className={`network-row${isSelected ? ' active' : ''}`}
+                    onClick={() => !submitted && setSelectedNetwork(net)}
+                    style={{
+                      cursor: submitted ? 'default' : 'pointer',
+                      border: isSelected ? '1px solid var(--neon-amber)' : undefined,
+                      background: isSelected ? 'rgba(255,165,2,0.08)' : undefined,
+                    }}
                   >
                     <div style={{ fontSize: '1.2rem' }}>
                       {net.security === 'Open' ? '🔓' : '🔒'}
@@ -204,98 +211,103 @@ export default function Station2WiFi() {
                       </span>
                     </div>
                     <SignalBars signal={net.signal} />
-                    <div style={{ color: 'var(--neon-cyan)', fontSize: '1.2rem' }}>→</div>
+                    <div style={{ fontSize: '1rem', color: isSelected ? 'var(--neon-amber)' : 'var(--text-muted)' }}>
+                      {isSelected ? '● Selected' : '○'}
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-        </div>
-      )}
-
-      {/* Scene: Outcome */}
-      {scene === 'outcome' && outcome && chosen && (
-        <div className="glass-card animate-fade-in" style={{ borderColor: `${outcome.color}40` }}>
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>{outcome.icon}</div>
-            <h2 style={{ color: outcome.color, marginBottom: '0.5rem' }}>{outcome.title}</h2>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              You connected to: <span style={{ color: 'var(--text-primary)' }}>{chosen.ssid}</span>
-            </div>
-            <p style={{ maxWidth: 520, margin: '0 auto', fontSize: '0.9rem', lineHeight: 1.7 }}>
-              {outcome.message}
-            </p>
-          </div>
-
-          {/* Network details */}
-          <div style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 10,
-            padding: '1rem',
-            marginBottom: '1.5rem',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '1rem',
-            textAlign: 'center',
-          }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>SSID</div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{chosen.ssid}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Security</div>
-              <span className={`badge ${(OUTCOME_BADGE[chosen.security] || { cls: 'badge-muted', label: chosen.security }).cls}`}>
-                {(OUTCOME_BADGE[chosen.security] || { label: chosen.security }).label}
-              </span>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Score</div>
-              <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: outcome.color }}>
-                {outcome.score}/5
+          {/* Submit Decision Bar */}
+          {!submitted && (
+            <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                  Connection Selection:
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                  {selectedNetwork ? selectedNetwork.ssid : 'None selected'}
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              id="wifi-try-again"
-              className="btn btn-ghost"
-              onClick={() => { setScene('scan'); setChosen(null); }}
-            >
-              ← Try Another Network
-            </button>
-            <button
-              id="wifi-submit"
-              className="btn btn-success"
-              style={{ flex: 1 }}
-              onClick={() => setShowScore(true)}
-            >
-              Submit Answer →
-            </button>
-          </div>
-          {!showScore && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: 'rgba(57,255,20,0.05)',
-              border: '1px solid rgba(57,255,20,0.2)',
-              borderRadius: 8,
-              padding: '0.75rem 1rem',
-              marginTop: '1.25rem',
-            }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--neon-green)', fontFamily: 'var(--font-mono)' }}>
-                ✓ Score saved to leaderboard. Ready for next team?
-              </span>
-              <a
-                href="/kiosk?station=2"
-                className="btn btn-danger btn-sm"
-                style={{ textDecoration: 'none' }}
+              <button
+                id="wifi-submit"
+                className="btn btn-warning btn-lg"
+                onClick={handleSubmit}
+                disabled={!selectedNetwork}
               >
-                🔒 Finish & Lock Kiosk
-              </a>
+                Submit Connection Decision →
+              </button>
+            </div>
+          )}
+
+          {/* Post-Submit Results Breakdown */}
+          {submitted && outcome && selectedNetwork && (
+            <div className="glass-card animate-fade-in" style={{ borderColor: `${outcome.color}40`, marginTop: '1.5rem' }}>
+              <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '3.5rem', marginBottom: '0.5rem' }}>{outcome.icon}</div>
+                <h2 style={{ color: outcome.color, marginBottom: '0.5rem' }}>{outcome.title}</h2>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                  You connected to: <span style={{ color: 'var(--text-primary)' }}>{selectedNetwork.ssid}</span>
+                </div>
+                <p style={{ maxWidth: 520, margin: '0 auto', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                  {outcome.message}
+                </p>
+              </div>
+
+              {/* Details card */}
+              <div style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 10,
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '1rem',
+                textAlign: 'center',
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>SSID</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{selectedNetwork.ssid}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Security Protocol</div>
+                  <span className={`badge ${(OUTCOME_BADGE[selectedNetwork.security] || { cls: 'badge-muted', label: selectedNetwork.security }).cls}`}>
+                    {(OUTCOME_BADGE[selectedNetwork.security] || { label: selectedNetwork.security }).label}
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>Score</div>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', color: outcome.color }}>
+                    {outcome.score}/5
+                  </div>
+                </div>
+              </div>
+
+              {!showScore && (
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(57,255,20,0.05)',
+                  border: '1px solid rgba(57,255,20,0.2)',
+                  borderRadius: 8,
+                  padding: '0.75rem 1rem',
+                }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--neon-green)', fontFamily: 'var(--font-mono)' }}>
+                    ✓ Score saved to leaderboard. Ready for next team?
+                  </span>
+                  <a
+                    href="/kiosk?station=2"
+                    className="btn btn-danger btn-sm"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    🔒 Finish & Lock Kiosk
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -312,4 +324,3 @@ export default function Station2WiFi() {
     </div>
   );
 }
-

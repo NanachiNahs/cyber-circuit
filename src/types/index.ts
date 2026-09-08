@@ -52,10 +52,10 @@ export interface StationConfig {
 }
 
 export const STATIONS: Record<StationId, StationConfig> = {
-  1: { id: 1, title: 'The Phishing Inbox',         subtitle: 'Email Security',     category: 'Email Security',     icon: '📧', color: '#ff4757' },
-  2: { id: 2, title: 'The Coffee Shop Connection',  subtitle: 'Network Security',   category: 'Network Security',   icon: '📡', color: '#ffa502' },
-  3: { id: 3, title: "The Hacker's Terminal",       subtitle: 'Authentication',     category: 'Authentication',     icon: '🔓', color: '#2ed573' },
-  4: { id: 4, title: 'Ransomware Containment',      subtitle: 'Incident Response',  category: 'Incident Response',  icon: '☣️', color: '#ff6b81' },
+  1: { id: 1, title: 'The Phishing Inbox', subtitle: 'Email Security', category: 'Email Security', icon: '📧', color: '#ff4757' },
+  2: { id: 2, title: 'The Coffee Shop Connection', subtitle: 'Network Security', category: 'Network Security', icon: '📡', color: '#ffa502' },
+  3: { id: 3, title: "The Hacker's Terminal", subtitle: 'Authentication', category: 'Authentication', icon: '🔓', color: '#2ed573' },
+  4: { id: 4, title: 'Ransomware Containment', subtitle: 'Incident Response', category: 'Incident Response', icon: '☣️', color: '#ff6b81' },
 };
 
 // Max points per station (from DB)
@@ -82,6 +82,7 @@ export interface PhishingEmail {
   date: string;
   body: string;
   link?: string;
+  isPhishing: boolean;
   flags: PhishingFlag[];
 }
 
@@ -130,6 +131,7 @@ export interface DbPhishingEmail {
   date_str: string;
   body: string;
   link_url?: string;
+  is_phishing?: boolean;
   flags: PhishingFlag[];
   created_at?: string;
 }
